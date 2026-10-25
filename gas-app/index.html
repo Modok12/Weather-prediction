@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Gas Level</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Gas Level</h1>
+    <p class="sub">Find out how much cooking gas is left in your cylinder</p>
+  </header>
+
+  <main>
+    <section class="card gauge-card">
+      <svg class="gauge" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="track" cx="60" cy="60" r="50"></circle>
+        <circle class="fill" id="gauge-fill" cx="60" cy="60" r="50"></circle>
+      </svg>
+      <div class="gauge-text">
+        <div class="pct" id="pct">--%</div>
+        <div class="kg" id="kg">No reading yet</div>
+      </div>
+      <p class="status" id="status"></p>
+      <dl class="stats">
+        <div><dt>Days left</dt><dd id="days-left">—</dd></div>
+        <div><dt>Runs out</dt><dd id="empty-date">—</dd></div>
+        <div><dt>Usage</dt><dd id="rate">—</dd></div>
+        <div><dt>Refill cost</dt><dd id="cost">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>New reading</h2>
+      <form id="reading-form">
+        <label>Weight of cylinder now (kg)
+          <input id="gross" type="number" inputmode="decimal" step="0.05" min="0" required placeholder="e.g. 20.5">
+        </label>
+        <button type="submit">Save reading</button>
+      </form>
+      <details>
+        <summary>How do I weigh it with a bathroom scale?</summary>
+        <ol>
+          <li>Close the valve and take off the regulator.</li>
+          <li>Weigh yourself. Note the number.</li>
+          <li>Weigh yourself again while holding the cylinder.</li>
+          <li>Second number minus first number = weight of the cylinder.</li>
+        </ol>
+        <p>A kitchen or luggage scale works for small (3–6 kg) cylinders. Weigh the same way each time.</p>
+      </details>
+      <div class="scale">
+        <label>Smart scale address (optional)
+          <input id="scale-url" type="url" placeholder="http://192.168.4.1/weight">
+        </label>
+        <button type="button" id="scale-read" class="secondary">Read from smart scale</button>
+        <p class="hint" id="scale-msg"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>My cylinder</h2>
+      <form id="settings-form">
+        <label>Cylinder size
+          <select id="cylinder"></select>
+        </label>
+        <label>Tare weight / TW (kg)
+          <input id="tare" type="number" inputmode="decimal" step="0.1" min="0" required>
+          <span class="hint">Look for "TW" stamped on the metal collar around the valve. That is the weight of the cylinder when it is empty.</span>
+        </label>
+        <label>Gas price per kg (₦)
+          <input id="price" type="number" inputmode="decimal" step="1" min="0">
+        </label>
+        <label>Warn me when gas is below (%)
+          <input id="threshold" type="number" inputmode="numeric" min="5" max="60" step="1">
+        </label>
+        <button type="submit">Save settings</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>History</h2>
+      <ul id="history" class="history"></ul>
+      <button type="button" id="clear" class="danger">Clear history</button>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

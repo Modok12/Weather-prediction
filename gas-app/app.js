@@ -1,0 +1,209 @@
+import {
+  CYLINDERS, findCylinder, gasRemaining, levelStatus, forecast, refillCost,
+} from './gas.js';
+
+const STORE_KEY = 'gas-level-v1';
+const CIRCUMFERENCE = 2 * Math.PI * 50;
+
+const defaults = {
+  cylinderId: '12.5kg',
+  tare: findCylinder('12.5kg').typicalTare,
+  pricePerKg: 1200,
+  threshold: 20,
+  scaleUrl: '',
+  // Gross weights are stored so changing the tare later re-computes history.
+  readings: [],
+};
+
+function load() {
+  try {
+    return { ...defaults, ...JSON.parse(localStorage.getItem(STORE_KEY) || '{}') };
+  } catch {
+    return { ...defaults };
+  }
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch {
+    // Storage unavailable (private mode); the app still works for this visit.
+  }
+}
+
+let state = load();
+const $ = (id) => document.getElementById(id);
+const naira = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 });
+const dateFmt = new Intl.DateTimeFormat('en-NG', { weekday: 'short', day: 'numeric', month: 'short' });
+const timeFmt = new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+
+function cylinder() {
+  return findCylinder(state.cylinderId) || findCylinder(defaults.cylinderId);
+}
+
+function gasReadings() {
+  const cap = cylinder().capacity;
+  return state.readings.map((r) => ({ t: r.t, gasKg: gasRemaining(r.gross, state.tare, cap).kg }));
+}
+
+const STATUS_TEXT = {
+  good: 'Plenty of gas',
+  half: 'Half or less remaining',
+  low: 'Gas is running low. Plan a refill soon.',
+  empty: 'Almost empty. Refill now.',
+};
+
+function render() {
+  const cyl = cylinder();
+  const card = document.querySelector('.gauge-card');
+  const latest = state.readings[state.readings.length - 1];
+
+  if (!latest) {
+    card.removeAttribute('data-level');
+    $('pct').textContent = '--%';
+    $('kg').textContent = 'No reading yet';
+    $('status').textContent = 'Weigh your cylinder and save a reading.';
+    $('gauge-fill').style.strokeDashoffset = CIRCUMFERENCE;
+    for (const id of ['days-left', 'empty-date', 'rate', 'cost']) $(id).textContent = '—';
+  } else {
+    const g = gasRemaining(latest.gross, state.tare, cyl.capacity);
+    const level = levelStatus(g.percent, state.threshold);
+    card.dataset.level = level;
+    $('pct').textContent = `${Math.round(g.percent)}%`;
+    $('kg').textContent = `${g.kg.toFixed(1)} of ${cyl.capacity} kg`;
+    $('status').textContent = g.suspicious
+      ? 'This reading looks off. Check the tare weight (TW) and cylinder size.'
+      : STATUS_TEXT[level];
+    $('gauge-fill').style.strokeDashoffset = CIRCUMFERENCE * (1 - g.percent / 100);
+
+    const f = forecast(gasReadings());
+    if (f.daysLeft === null) {
+      $('days-left').textContent = 'Need more readings';
+      $('empty-date').textContent = '—';
+    } else {
+      $('days-left').textContent = `${Math.round(f.daysLeft)} days`;
+      $('empty-date').textContent = dateFmt.format(f.emptyDate);
+    }
+    $('rate').textContent = f.ratePerDay ? `${f.ratePerDay.toFixed(2)} kg/day` : '—';
+    $('cost').textContent = state.pricePerKg
+      ? naira.format(refillCost(g.kg, cyl.capacity, state.pricePerKg))
+      : '—';
+  }
+
+  const list = $('history');
+  list.replaceChildren();
+  if (state.readings.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'empty-note';
+    li.textContent = 'No readings yet.';
+    list.append(li);
+  }
+  [...state.readings].reverse().forEach((r) => {
+    const g = gasRemaining(r.gross, state.tare, cyl.capacity);
+    const li = document.createElement('li');
+    const when = document.createElement('span');
+    when.textContent = timeFmt.format(new Date(r.t));
+    const what = document.createElement('span');
+    what.textContent = `${r.gross} kg → ${g.kg.toFixed(1)} kg gas`;
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', 'Delete reading');
+    del.addEventListener('click', () => {
+      state.readings = state.readings.filter((x) => x !== r);
+      save();
+      render();
+    });
+    li.append(when, what, del);
+    list.append(li);
+  });
+}
+
+function fillSettings() {
+  const sel = $('cylinder');
+  sel.replaceChildren(...CYLINDERS.map((c) => new Option(c.label, c.id)));
+  sel.value = state.cylinderId;
+  $('tare').value = state.tare;
+  $('price').value = state.pricePerKg;
+  $('threshold').value = state.threshold;
+  $('scale-url').value = state.scaleUrl;
+}
+
+function addReading(gross) {
+  state.readings.push({ t: Date.now(), gross: Math.round(gross * 100) / 100 });
+  state.readings.sort((a, b) => a.t - b.t);
+  save();
+  render();
+  maybeNotify();
+}
+
+function maybeNotify() {
+  const latest = state.readings[state.readings.length - 1];
+  if (!latest || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const g = gasRemaining(latest.gross, state.tare, cylinder().capacity);
+  const level = levelStatus(g.percent, state.threshold);
+  if (level === 'low' || level === 'empty') {
+    new Notification('Cooking gas is low', { body: `${g.kg.toFixed(1)} kg (${Math.round(g.percent)}%) left.` });
+  }
+}
+
+$('reading-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const gross = parseFloat($('gross').value);
+  if (!Number.isFinite(gross) || gross <= 0) return;
+  addReading(gross);
+  $('gross').value = '';
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+});
+
+$('cylinder').addEventListener('change', () => {
+  // Suggest the typical tare for the new size; the user should still check the TW stamp.
+  $('tare').value = findCylinder($('cylinder').value).typicalTare;
+});
+
+$('settings-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  state.cylinderId = $('cylinder').value;
+  state.tare = parseFloat($('tare').value) || cylinder().typicalTare;
+  state.pricePerKg = parseFloat($('price').value) || 0;
+  state.threshold = Math.min(Math.max(parseInt($('threshold').value, 10) || 20, 5), 60);
+  save();
+  render();
+});
+
+$('scale-read').addEventListener('click', async () => {
+  const url = $('scale-url').value.trim();
+  const msg = $('scale-msg');
+  if (!url) {
+    msg.textContent = 'Enter the address shown by your smart scale.';
+    return;
+  }
+  state.scaleUrl = url;
+  save();
+  msg.textContent = 'Reading…';
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const data = await res.json();
+    const gross = Number(data.grossKg);
+    if (!Number.isFinite(gross)) throw new Error('No weight in response');
+    addReading(gross);
+    msg.textContent = `Saved ${gross.toFixed(2)} kg from scale.`;
+  } catch (err) {
+    msg.textContent = `Could not read the scale (${err.message}). Is your phone on the scale's Wi-Fi?`;
+  }
+});
+
+$('clear').addEventListener('click', () => {
+  if (state.readings.length && confirm('Delete all readings?')) {
+    state.readings = [];
+    save();
+    render();
+  }
+});
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+fillSettings();
+render();
