@@ -1,9 +1,11 @@
 import {
   CYLINDERS, findCylinder, gasRemaining, levelStatus, forecast, refillCost,
 } from './gas.js';
+import { premium } from './premium.js';
 
 const STORE_KEY = 'gas-level-v1';
 const CIRCUMFERENCE = 2 * Math.PI * 50;
+const FREE_HISTORY = 5;
 
 const defaults = {
   cylinderId: '12.5kg',
@@ -77,14 +79,16 @@ function render() {
     $('gauge-fill').style.strokeDashoffset = CIRCUMFERENCE * (1 - g.percent / 100);
 
     const f = forecast(gasReadings());
-    if (f.daysLeft === null) {
+    if (!premium.active) {
+      for (const id of ['days-left', 'empty-date', 'rate']) $(id).replaceChildren(lockedLink());
+    } else if (f.daysLeft === null) {
       $('days-left').textContent = 'Need more readings';
       $('empty-date').textContent = '—';
     } else {
       $('days-left').textContent = `${Math.round(f.daysLeft)} days`;
       $('empty-date').textContent = dateFmt.format(f.emptyDate);
     }
-    $('rate').textContent = f.ratePerDay ? `${f.ratePerDay.toFixed(2)} kg/day` : '—';
+    if (premium.active) $('rate').textContent = f.ratePerDay ? `${f.ratePerDay.toFixed(2)} kg/day` : '—';
     $('cost').textContent = state.pricePerKg
       ? naira.format(refillCost(g.kg, cyl.capacity, state.pricePerKg))
       : '—';
@@ -98,7 +102,12 @@ function render() {
     li.textContent = 'No readings yet.';
     list.append(li);
   }
-  [...state.readings].reverse().forEach((r) => {
+  const shown = premium.active ? state.readings : state.readings.slice(-FREE_HISTORY);
+  const hidden = state.readings.length - shown.length;
+  $('history-note').hidden = hidden === 0;
+  $('history-note').textContent = `${hidden} older reading${hidden === 1 ? '' : 's'} hidden. Get Premium to see your full history.`;
+  $('export').hidden = !premium.active || state.readings.length === 0;
+  [...shown].reverse().forEach((r) => {
     const g = gasRemaining(r.gross, state.tare, cyl.capacity);
     const li = document.createElement('li');
     const when = document.createElement('span');
@@ -117,6 +126,62 @@ function render() {
     li.append(when, what, del);
     list.append(li);
   });
+
+  $('scale-locked').hidden = premium.active;
+  if (premium.active) $('scale').removeAttribute('data-locked');
+  else $('scale').dataset.locked = '';
+  renderPremium();
+}
+
+function lockedLink() {
+  const a = document.createElement('a');
+  a.href = '#premium';
+  a.className = 'locked';
+  a.textContent = '🔒 Premium';
+  return a;
+}
+
+let selectedPlan = null;
+
+function renderPremium() {
+  const acct = premium.account;
+  $('premium-off').hidden = premium.active;
+  $('premium-on').hidden = !premium.active;
+  if (premium.active && acct) {
+    const until = acct.periodEnd ? dateFmt.format(new Date(acct.periodEnd)) : null;
+    const verb = acct.status === 'non-renewing' ? 'Ends' : 'Renews';
+    $('premium-detail').textContent = [acct.email, until && `${verb} ${until}`].filter(Boolean).join(' · ');
+  }
+}
+
+async function loadPlans() {
+  const box = $('plans');
+  try {
+    const plans = await premium.plans();
+    box.replaceChildren(...plans.map((p) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'plan';
+      b.setAttribute('aria-pressed', 'false');
+      const price = document.createElement('strong');
+      price.textContent = naira.format(p.amount);
+      const per = document.createElement('small');
+      per.textContent = { monthly: 'per month', annually: 'per year', weekly: 'per week', quarterly: 'per 3 months' }[p.interval] || p.interval;
+      b.append(p.name, price, per);
+      b.addEventListener('click', () => {
+        selectedPlan = p.code;
+        box.querySelectorAll('.plan').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        $('subscribe-form').hidden = false;
+        $('sub-email').focus();
+      });
+      return b;
+    }));
+  } catch {
+    box.replaceChildren();
+    $('premium-msg').textContent = navigator.onLine
+      ? 'Subscriptions are not available on this copy of the app.'
+      : 'Connect to the internet to see Premium plans.';
+  }
 }
 
 function fillSettings() {
@@ -172,6 +237,7 @@ $('settings-form').addEventListener('submit', (e) => {
 });
 
 $('scale-read').addEventListener('click', async () => {
+  if (!premium.active) return;
   const url = $('scale-url').value.trim();
   const msg = $('scale-msg');
   if (!url) {
@@ -193,6 +259,51 @@ $('scale-read').addEventListener('click', async () => {
   }
 });
 
+$('export').addEventListener('click', () => {
+  const cap = cylinder().capacity;
+  const rows = [['time', 'cylinder_weight_kg', 'gas_kg', 'percent']].concat(state.readings.map((r) => {
+    const g = gasRemaining(r.gross, state.tare, cap);
+    return [new Date(r.t).toISOString(), r.gross, g.kg.toFixed(2), g.percent.toFixed(1)];
+  }));
+  const blob = new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gas-readings.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+$('subscribe-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!selectedPlan) return;
+  const btn = $('subscribe-btn');
+  btn.disabled = true;
+  $('premium-msg').textContent = 'Opening Paystack…';
+  try {
+    await premium.subscribe($('sub-email').value.trim(), selectedPlan);
+  } catch (err) {
+    $('premium-msg').textContent = err.message;
+    btn.disabled = false;
+  }
+});
+
+$('manage').addEventListener('click', async () => {
+  try {
+    location.assign(await premium.manageUrl());
+  } catch (err) {
+    $('premium-msg').textContent = err.status === 404
+      ? 'Your subscription is still being set up. Try again in a few minutes.'
+      : err.message;
+  }
+});
+
+$('sign-out').addEventListener('click', () => {
+  if (confirm('Remove Premium from this device? Your subscription keeps running and is not cancelled.')) {
+    premium.signOut();
+    render();
+  }
+});
+
 $('clear').addEventListener('click', () => {
   if (state.readings.length && confirm('Delete all readings?')) {
     state.readings = [];
@@ -207,3 +318,12 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 fillSettings();
 render();
+loadPlans();
+premium.refresh()
+  .then(({ justSubscribed }) => {
+    if (justSubscribed) $('premium-msg').textContent = 'Thank you! Premium is now active.';
+  })
+  .catch((err) => {
+    $('premium-msg').textContent = `We couldn't confirm your payment: ${err.message}`;
+  })
+  .finally(render);

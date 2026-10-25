@@ -23,6 +23,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -125,3 +126,24 @@ summary { cursor: pointer; color: var(--accent); }
 .history li span:first-child { flex: 1; color: var(--muted); font-size: 0.9rem; }
 .history li button { width: auto; padding: 4px 10px; background: transparent; color: var(--muted); }
 .history .empty-note { color: var(--muted); }
+
+.locked { color: var(--muted); font-weight: 500; text-decoration: none; }
+.locked-note { color: var(--muted); margin: 0 0 8px; }
+[data-locked] label, [data-locked] #scale-read { opacity: 0.45; pointer-events: none; }
+a { color: var(--accent); }
+
+.premium-card h2::before { content: "★ "; color: var(--half); }
+.benefits { padding-left: 20px; margin: 0 0 12px; }
+.benefits li { margin-bottom: 4px; }
+.plans { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.plan {
+  background: var(--bg);
+  color: var(--text);
+  border: 2px solid var(--line);
+  text-align: left;
+  font-weight: 500;
+}
+.plan[aria-pressed="true"] { border-color: var(--accent); }
+.plan strong { display: block; font-size: 1.15rem; }
+.plan small { color: var(--muted); }
+.premium-badge { font-weight: 700; color: var(--good); margin: 0; }

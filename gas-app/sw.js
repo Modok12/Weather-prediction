@@ -1,6 +1,6 @@
 // Offline cache so the app opens without data.
-const CACHE = 'gas-level-v1';
-const FILES = ['./', './index.html', './styles.css', './app.js', './gas.js', './manifest.json', './icon.svg'];
+const CACHE = 'gas-level-v2';
+const FILES = ['./', './index.html', './styles.css', './app.js', './gas.js', './premium.js', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)));
@@ -11,7 +11,9 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
+  const url = new URL(e.request.url);
+  // Never cache the subscription API.
+  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/api/')) return;
   // Network first so updates show up; fall back to the cache when offline.
   e.respondWith(
     fetch(e.request)

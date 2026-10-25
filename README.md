@@ -28,7 +28,7 @@ There are two ways to get the weight into the app:
 
 ## The app (`gas-app/`)
 
-An offline web app (PWA) with no build step and no server-side code. You can add it to your phone's home screen.
+An offline web app (PWA) with no build step. You can add it to your phone's home screen.
 
 - Pick your cylinder size, enter the TW and the price per kg in ₦
 - Shows a gauge with % and kg of gas left, colour-coded good / half / low / empty
@@ -49,6 +49,53 @@ npm test         # unit tests for the gas maths (Node 18+)
 
 To use it on a phone, host the `gas-app/` folder on any static host (for example GitHub
 Pages or Netlify). Then open it in Chrome and choose "Add to Home screen".
+
+## Premium subscriptions (Paystack)
+
+The basic gauge is free. **Premium** is a recurring plan billed in ₦ through
+[Paystack](https://paystack.com) (card, bank transfer or USSD), and it unlocks:
+
+- the run-out date, days left and daily usage forecast
+- automatic readings from the smart scale
+- full reading history with CSV download (free users see the last 5 readings)
+
+Payments need a small server (`server/`, plain Node 20+, no dependencies). It
+keeps the Paystack secret key off the phone, checks each payment, receives
+Paystack webhooks and serves the app itself.
+
+```
+Phone ──► server /api/subscribe ──► Paystack checkout ──► back to app with ?reference=
+                /api/verify  ◄────────────────────────────┘   (server confirms with Paystack,
+                /api/me      (status check on app start)       gives the phone an access token)
+                /api/manage  (Paystack's cancel / change-card page)
+Paystack ──► /api/paystack/webhook  (renewals, failed payments, cancellations)
+```
+
+Set up:
+
+1. In the Paystack dashboard, create your plans under **Payments → Plans** (for
+   example *Monthly ₦500* and *Yearly ₦5,000*), then copy their plan codes (`PLN_...`).
+2. `cp server/.env.example server/.env` and fill in your secret key, plan codes,
+   a random `TOKEN_SECRET` and the public `APP_URL`.
+3. Under **Settings → API Keys & Webhooks**, set the webhook URL to
+   `https://<your-domain>/api/paystack/webhook`.
+4. Start the server:
+
+   ```bash
+   cd server
+   npm start      # app + API on http://localhost:3000
+   npm test       # API tests against a fake Paystack
+   ```
+
+Test with `sk_test_...` keys and Paystack's test cards before switching to live
+keys. Subscribers are stored in `server/data/subscribers.json`. Move this to a
+database once you have a lot of customers. Premium is tied to the device that
+paid. If someone moves to a new phone, they currently need to contact you
+(there's no email login yet).
+
+If you host `gas-app/` on its own (for example on GitHub Pages), there is no
+server, so the app stays fully free and the Premium card says that
+subscriptions aren't available.
 
 ## Smart scale hardware
 

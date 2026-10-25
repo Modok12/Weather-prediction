@@ -52,7 +52,8 @@
         </ol>
         <p>A kitchen or luggage scale works for small (3–6 kg) cylinders. Weigh the same way each time.</p>
       </details>
-      <div class="scale">
+      <div class="scale" id="scale">
+        <p class="locked-note" id="scale-locked" hidden>Reading automatically from a smart scale is a <a href="#premium">Premium</a> feature.</p>
         <label>Smart scale address (optional)
           <input id="scale-url" type="url" placeholder="http://192.168.4.1/weight">
         </label>
@@ -84,7 +85,36 @@
     <section class="card">
       <h2>History</h2>
       <ul id="history" class="history"></ul>
+      <p class="hint" id="history-note" hidden></p>
+      <button type="button" id="export" class="secondary">Download history (CSV)</button>
       <button type="button" id="clear" class="danger">Clear history</button>
+    </section>
+
+    <section class="card premium-card" id="premium">
+      <h2>Premium</h2>
+      <div id="premium-off">
+        <ul class="benefits">
+          <li>Predicts the date your gas will run out</li>
+          <li>Shows how much gas you use per day</li>
+          <li>Reads your smart scale automatically</li>
+          <li>Keeps your full reading history, with CSV download</li>
+        </ul>
+        <div id="plans" class="plans"></div>
+        <form id="subscribe-form" hidden>
+          <label>Email for receipts
+            <input id="sub-email" type="email" autocomplete="email" required placeholder="you@example.com">
+          </label>
+          <button type="submit" id="subscribe-btn">Continue to payment</button>
+          <p class="hint">Payments are handled securely by Paystack. You can pay by card, bank transfer or USSD. Cancel anytime.</p>
+        </form>
+      </div>
+      <div id="premium-on" hidden>
+        <p class="premium-badge">Premium is active</p>
+        <p class="hint" id="premium-detail"></p>
+        <button type="button" id="manage" class="secondary">Manage or cancel subscription</button>
+        <button type="button" id="sign-out" class="danger">Remove Premium from this device</button>
+      </div>
+      <p class="hint" id="premium-msg" role="status"></p>
     </section>
   </main>
 
