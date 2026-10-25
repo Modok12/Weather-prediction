@@ -1,0 +1,6 @@
+{
+  "memories": [
+    { "src": "media/first-date.jpg", "date": "2019-06-14", "caption": "Our first date ♥", "favorite": true },
+    { "src": "media/proposal.mov", "date": "2021-12-24", "caption": "She said yes", "poster": "media/proposal-poster.jpg" }
+  ]
+}

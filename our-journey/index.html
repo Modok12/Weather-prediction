@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Our Journey</title>
+  <meta name="description" content="Our photos and videos, together in one place.">
+  <meta name="theme-color" content="#1c1416">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Our Journey">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app">
+    <!-- Home -->
+    <section id="home" class="view active">
+      <header class="hero">
+        <div class="hero-bg" id="heroBg"></div>
+        <div class="hero-content">
+          <p class="eyebrow" id="heroNames">Us</p>
+          <h1>Our Journey</h1>
+          <p class="counter" id="dayCounter"></p>
+          <button class="btn primary big" id="playBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            Play our story
+          </button>
+        </div>
+      </header>
+
+      <div class="home-body">
+        <article class="card on-this-day" id="onThisDay" hidden>
+          <p class="eyebrow">On this day</p>
+          <div class="otd-media" id="otdMedia"></div>
+          <p class="otd-caption" id="otdCaption"></p>
+        </article>
+
+        <div class="section-head">
+          <h2>Our memories</h2>
+          <span class="muted" id="memoryCount"></span>
+        </div>
+        <div id="timeline"></div>
+
+        <div class="empty" id="emptyState" hidden>
+          <p class="script">Every story starts somewhere.</p>
+          <p class="muted">Tap <strong>Add</strong> to bring in photos and videos from your library.</p>
+        </div>
+      </div>
+
+      <nav class="tabbar">
+        <label class="tab add" for="fileInput">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v14h-2zM5 11h14v2H5z"/></svg>
+          Add
+        </label>
+        <input id="fileInput" type="file" accept="image/*,video/*" multiple hidden>
+        <button class="tab" id="settingsBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 0 0 12 8.5zm8.4 4.9-1.9-.3a6.8 6.8 0 0 1-.6 1.5l1.1 1.6-1.6 1.6-1.6-1.1c-.5.3-1 .5-1.5.6l-.3 1.9h-2.3l-.3-1.9a6.8 6.8 0 0 1-1.5-.6l-1.6 1.1-1.6-1.6 1.1-1.6a6.8 6.8 0 0 1-.6-1.5l-1.9-.3v-2.3l1.9-.3c.1-.5.3-1 .6-1.5L5.6 7.1l1.6-1.6 1.6 1.1c.5-.3 1-.5 1.5-.6l.3-1.9h2.3l.3 1.9c.5.1 1 .3 1.5.6l1.6-1.1 1.6 1.6-1.1 1.6c.3.5.5 1 .6 1.5l1.9.3z"/></svg>
+          Settings
+        </button>
+      </nav>
+    </section>
+
+    <!-- Slideshow -->
+    <section id="show" class="view" aria-label="Slideshow">
+      <div class="stage" id="stage">
+        <div class="slide" id="slideA"></div>
+        <div class="slide" id="slideB"></div>
+      </div>
+      <div class="show-caption" id="showCaption">
+        <p class="show-date" id="showDate"></p>
+        <p class="show-text" id="showText"></p>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div class="show-controls" id="showControls">
+        <button class="icon-btn" id="closeShow" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg>
+        </button>
+        <div class="show-buttons">
+          <button class="icon-btn" id="prevBtn" type="button" aria-label="Previous">
+            <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          </button>
+          <button class="icon-btn big" id="pauseBtn" type="button" aria-label="Pause">
+            <svg viewBox="0 0 24 24" id="pauseIcon"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+          </button>
+          <button class="icon-btn" id="nextBtn" type="button" aria-label="Next">
+            <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Edit memory sheet -->
+  <dialog id="editSheet" class="sheet">
+    <form method="dialog" id="editForm">
+      <div class="sheet-media" id="editMedia"></div>
+      <label>Date
+        <input type="date" id="editDate" required>
+      </label>
+      <label>Caption
+        <textarea id="editCaption" rows="3" placeholder="Where were we? What made this day special?"></textarea>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="editFavorite"> Favorite ♥
+      </label>
+      <div class="sheet-actions">
+        <button class="btn danger" id="deleteBtn" type="button">Delete</button>
+        <button class="btn" id="playFromBtn" type="button">Play from here</button>
+        <span class="spacer"></span>
+        <button class="btn" value="cancel" type="submit" formnovalidate>Cancel</button>
+        <button class="btn primary" id="saveBtn" value="save" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings sheet -->
+  <dialog id="settingsSheet" class="sheet">
+    <form method="dialog" id="settingsForm">
+      <h2>Settings</h2>
+      <label>Your names
+        <input type="text" id="setNames" placeholder="e.g. Thomas &amp; Maria">
+      </label>
+      <label>The day it all began
+        <input type="date" id="setStart">
+      </label>
+      <label>Seconds per photo
+        <input type="range" id="setDuration" min="3" max="12" step="1">
+        <span class="muted" id="durationLabel"></span>
+      </label>
+      <label>Order
+        <select id="setOrder">
+          <option value="chrono">Oldest to newest</option>
+          <option value="reverse">Newest to oldest</option>
+          <option value="shuffle">Shuffle</option>
+          <option value="favorites">Favorites only</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="setChapters"> Show a title card for each year</label>
+      <label class="check"><input type="checkbox" id="setVideoSound"> Play video sound (pauses music)</label>
+      <div class="field">Background music
+        <span class="row">
+          <span class="muted" id="musicName">None</span>
+          <label class="btn small" for="musicInput">Choose…</label>
+          <button class="btn small" id="clearMusic" type="button">Remove</button>
+        </span>
+        <input id="musicInput" type="file" accept="audio/*" hidden>
+      </div>
+      <p class="muted small" id="storageInfo"></p>
+      <div class="sheet-actions">
+        <span class="spacer"></span>
+        <button class="btn primary" value="save" type="submit">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
